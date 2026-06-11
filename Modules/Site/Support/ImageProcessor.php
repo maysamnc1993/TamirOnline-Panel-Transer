@@ -69,6 +69,24 @@ final class ImageProcessor
             return [];
         }
 
+        // ضمانت حافظه — GD برای imagecreatefrom* ~۴ بایت per pixel نیاز دارد
+        // (RGBA truecolor) + buffer. اگر memory_limit پاسخ نمی‌دهد، original
+        // ذخیره می‌شود و variants skip می‌شوند تا کل process نشکند.
+        $pixels = $info['width'] * $info['height'];
+        $estimatedBytes = $pixels * 5 + 4 * 1024 * 1024;
+        $memoryLimit = self::memoryLimitBytes();
+        if ($memoryLimit > 0 && $estimatedBytes > (int) ($memoryLimit * 0.6)) {
+            \Illuminate\Support\Facades\Log::warning('image_processor.variants_skipped_too_large', [
+                'path' => $originalRelativePath,
+                'width' => $info['width'],
+                'height' => $info['height'],
+                'estimated_mb' => (int) round($estimatedBytes / 1024 / 1024),
+                'limit_mb' => (int) round($memoryLimit / 1024 / 1024),
+            ]);
+
+            return [];
+        }
+
         $src = self::createImage($absolute, $info['mime']);
         if (! $src) {
             return [];
@@ -173,5 +191,25 @@ final class ImageProcessor
         }
 
         return $a;
+    }
+
+    /**
+     * memory_limit به بایت — 0 یعنی بدون محدودیت (-1).
+     */
+    private static function memoryLimitBytes(): int
+    {
+        $raw = trim((string) ini_get('memory_limit'));
+        if ($raw === '' || $raw === '-1') {
+            return 0;
+        }
+        $unit = strtolower(substr($raw, -1));
+        $value = (int) $raw;
+
+        return match ($unit) {
+            'g' => $value * 1024 * 1024 * 1024,
+            'm' => $value * 1024 * 1024,
+            'k' => $value * 1024,
+            default => (int) $raw,
+        };
     }
 }
