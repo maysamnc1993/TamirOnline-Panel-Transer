@@ -38,22 +38,42 @@
 
 ---
 
-## ۲) Zoneهای آماده برای اپ
+## ۲) Zoneهای آماده برای اپ (قطعی — 2026-06-12)
 
-این ۴ zone با پیشوند `app_` از قبل seed شده‌اند:
+این ۵ zone مطابق درخواست تیم اپ seed شده‌اند:
 
-| Slug | محل در اپ | ابعاد پیشنهادی | max | کاربرد |
-|---|---|---|---|---|
-| `app_home_top` | بالای صفحه اصلی (اسلایدر) | 1080×540 | ۵ | بنر هیرو، اسلایدر برندینگ |
-| `app_home_promo` | پایین‌تر در صفحه اصلی | 1080×400 | ۳ | کد تخفیف، خدمت جدید |
-| `app_orders_promo` | صفحه «سفارش‌های من» | 1080×300 | ۲ | معرفی خدمت در زمان مرور سفارش‌ها |
-| `app_profile_promo` | صفحه پروفایل | 1080×300 | ۲ | دعوت دوستان، باشگاه مشتریان |
+| Slug | محل در اپ | نسبت | ابعاد منبع | max | کاربرد |
+|---|---|---|---|---|---|
+| `login` | اسلایدر صفحه ورود/ثبت‌نام | **۱۶/۹** | 1280×720 | ۵ | معرفی برند، تخفیف ثبت‌نام |
+| `home_top` | اسلایدر بالای صفحه اصلی | **۱۶/۹** | 1280×720 | ۵ | بنر هیرو، اسلایدر برندینگ |
+| `home_promotions` | کارت‌های مربع تبلیغ صفحه اصلی | **۱/۱** | 1080×1080 | ۶ | کد تخفیف، خدمت جدید |
+| `orders_list` | باند افقی صفحه «سفارش‌های من» | **۱۶/۵** | 1600×500 | ۳ | معرفی خدمت در زمان مرور سفارش‌ها |
+| `profile` | باند افقی صفحه پروفایل | **۱۶/۵** | 1600×500 | ۳ | دعوت دوستان، باشگاه مشتریان |
 
-> پیشوند `app_` عمداً انتخاب شده تا با zoneهای وب (`home_hero`, `blog_sidebar`, …) قاطی نشود.
+> **هیچ پیشوند `app_` نیست** — قرارداد مستقیم تیم اپ. با zoneهای وب (`home_hero`, `blog_sidebar`, …) conflict ندارد.
+
+### ابعاد دقیق در فرانت
+
+```ts
+const APP_BANNER_ASPECT = {
+  login: 16 / 9,
+  home_top: 16 / 9,
+  home_promotions: 1,
+  orders_list: 16 / 5,
+  profile: 16 / 5,
+} as const;
+
+// در React Native:
+<Image
+  source={{ uri: banner.image_url }}
+  style={{ width: '100%', aspectRatio: APP_BANNER_ASPECT[banner.placement] }}
+  resizeMode="cover"
+/>
+```
 
 ### اگر zone جدید نیاز دارید
 
-تیم فرانت می‌تواند درخواست کند که zone جدید اضافه شود — کافی است slug + محل + ابعاد را اعلام کنید. ادمین از `/admin/site/banner-zones` می‌تواند خودش هم بسازد بدون نیاز به deploy.
+تیم فرانت می‌تواند درخواست کند که zone جدید اضافه شود — کافی است slug + محل + نسبت ابعاد را اعلام کنید. ادمین از `/admin/site/banner-zones` می‌تواند خودش هم بسازد بدون نیاز به deploy.
 
 ---
 
@@ -72,7 +92,7 @@
 |---|---|---|
 | **عنوان** (`title`) | ✅ | عنوان داخلی + alt تصویر |
 | **زیرعنوان** (`subtitle`) | ❌ | متن کمکی (اختیاری) |
-| **زون** (`zone_id`) | ✅ | یکی از zoneهای بالا را انتخاب کنید (مثلاً `app_home_top`) |
+| **زون** (`zone_id`) | ✅ | یکی از zoneهای بالا را انتخاب کنید (مثلاً `home_top`) |
 | **تصویر دسکتاپ** (`media_id`) | ✅ | از media library انتخاب کنید (یا URL مستقیم در `image_url`) |
 | **تصویر موبایل** (`media_id_mobile`) | ❌ | نسخه‌ی portrait برای موبایل (اگر متفاوت می‌خواهید) |
 | **لینک مقصد** (`link_url`) | ❌ | کلیک کاربر کجا برود — می‌تواند **داخلی** باشد (`/orders/new`) یا **خارجی** (`https://...`) |
@@ -88,7 +108,7 @@
 
 - 🔴 **`is_published` + بازه‌ی زمانی هر دو باید درست باشند**؛ هر کدام false/خارج از بازه → بنر در API برنمی‌گردد.
 - 🟡 ابعاد را رعایت کنید — تصویر با نسبت اشتباه crop می‌شود.
-- 🟢 برای اسلایدر `app_home_top` بنرها به ترتیب `sort_order` نمایش داده می‌شوند.
+- 🟢 برای اسلایدر `home_top` بنرها به ترتیب `sort_order` نمایش داده می‌شوند.
 - 🟢 برای کمپین زمان‌دار، `starts_at` و `ends_at` را ست کنید — لازم نیست یادتان باشد بنر را خاموش کنید.
 
 ---
@@ -100,7 +120,7 @@
 #### `GET /v1/customer/services/banners?placement=<slug>` (public)
 
 ```bash
-GET /v1/customer/services/banners?placement=app_home_top
+GET /v1/customer/services/banners?placement=home_top
 Accept: application/json
 # auth لازم نیست + Cache-Control: public, max-age=300
 ```
@@ -114,7 +134,7 @@ Accept: application/json
       "title": "تخفیف ویژه پاییز",
       "image_url": "https://panel.tamironline.com/storage/site/media/.../xxx.webp",
       "link_url": "/orders/new?promo=AUTUMN",
-      "placement": "app_home_top",
+      "placement": "home_top",
       "active": true,
       "order": 1
     }
@@ -141,10 +161,10 @@ Accept: application/json
 {
   "success": true,
   "data": {
-    "app_home_top":     [{...}, {...}],
-    "app_home_promo":   [{...}],
-    "app_orders_promo": [],
-    "app_profile_promo":[{...}],
+    "home_top":     [{...}, {...}],
+    "home_promotions":   [{...}],
+    "orders_list": [],
+    "profile":[{...}],
     "home_hero":        [{...}],
     ...
   }
@@ -184,7 +204,7 @@ function useBanners(placement: string) {
 
 // نمایش — اسلایدر hero
 function HomeHeroSlider() {
-  const banners = useBanners('app_home_top');
+  const banners = useBanners('home_top');
   if (banners.length === 0) return null;
 
   return (
@@ -221,7 +241,7 @@ function handleBannerPress(b: AppBanner) {
 
 ```tsx
 function ProfilePromoBanner() {
-  const [b] = useBanners('app_profile_promo'); // اولین بنر فعال
+  const [b] = useBanners('profile'); // اولین بنر فعال
   if (!b) return null;
 
   return (
@@ -244,7 +264,7 @@ function ProfilePromoBanner() {
 - ✅ **بنرها را cache کنید** — `Cache-Control: public, max-age=300` سرور می‌فرستد. اگر اپ شما SWR/React Query دارد، همین کافی است.
 - ✅ **اگر `data: []` بود کاری نکنید** — هیچ skeleton/placeholder نشان ندهید. zone خالی = «بنری نباشد».
 - ✅ **`accessibilityLabel`** را از `title` پر کنید — برای screen reader مهم است.
-- ✅ **lazy loading** برای بنرهای پایین صفحه (`app_profile_promo`).
+- ✅ **lazy loading** برای بنرهای پایین صفحه (`profile`).
 - ⚠️ **link_url را trust نکنید** — اگر URL خارجی است حتماً تأیید کاربر (یا `WebView` در اپ) داشته باشید.
 - ⚠️ **fail-silent** — اگر API down شد، اپ نباید بشکند. صرفاً بنر نمایش نده.
 
