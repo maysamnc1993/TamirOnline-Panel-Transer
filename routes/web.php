@@ -140,8 +140,28 @@ Route::middleware(['auth', 'verified.mobile'])->prefix('admin')->name('admin.')-
     Route::get('/restore/{table}', [DataRestoreController::class, 'show'])->name('restore.show');
     Route::post('/restore/{table}', [DataRestoreController::class, 'restore'])->name('restore.do');
 
+    // Written messenger: authenticated users, private saved spaces and protected files.
+    Route::prefix('messenger-api')->name('messenger-api.')->group(function () {
+        Route::get('/users', [\App\Http\Controllers\Admin\TextMessengerController::class, 'users'])->name('users');
+        Route::get('/conversations', [\App\Http\Controllers\Admin\TextMessengerController::class, 'conversations'])->name('conversations');
+        Route::post('/conversations/self', [\App\Http\Controllers\Admin\TextMessengerController::class, 'personalSpace'])->name('self');
+        Route::get('/messages/starred', [\App\Http\Controllers\Admin\TextMessengerController::class, 'stars'])->name('stars');
+        Route::get('/drafts', [\App\Http\Controllers\Admin\TextMessengerController::class, 'drafts'])->name('drafts');
+        Route::post('/drafts', [\App\Http\Controllers\Admin\TextMessengerController::class, 'drafts'])->name('drafts.save');
+        Route::post('/presence', [\App\Http\Controllers\Admin\TextMessengerController::class, 'presence'])->name('presence');
+        Route::post('/conversations/start', [\App\Http\Controllers\Admin\TextMessengerController::class, 'start'])->name('start');
+        Route::post('/conversations/group', [\App\Http\Controllers\Admin\TextMessengerController::class, 'createGroup'])->name('group');
+        Route::get('/conversations/{conversation}/messages', [\App\Http\Controllers\Admin\TextMessengerController::class, 'messages'])->name('messages');
+        Route::post('/conversations/{conversation}/messages', [\App\Http\Controllers\Admin\TextMessengerController::class, 'send'])->name('send');
+        Route::get('/conversations/{conversation}/search', [\App\Http\Controllers\Admin\TextMessengerController::class, 'search'])->name('search');
+        Route::post('/messages/{message}/star', [\App\Http\Controllers\Admin\TextMessengerController::class, 'star'])->name('star');
+        Route::post('/messages/{message}/edit', [\App\Http\Controllers\Admin\TextMessengerController::class, 'edit'])->name('edit');
+        Route::post('/messages/{message}/reaction', [\App\Http\Controllers\Admin\TextMessengerController::class, 'reaction'])->name('reaction');
+        Route::get('/messages/{message}/attachment', [\App\Http\Controllers\Admin\TextMessengerController::class, 'attachment'])->name('attachment');
+    });
+
     // Chat System
-    Route::prefix('chat')->name('chat.')->group(function () {
+    Route::prefix('chat')->name('chat.')->middleware(\App\Http\Middleware\TextOnlyMessenger::class)->group(function () {
         Route::get('/users', [ChatController::class, 'users'])->name('users');
         Route::get('/conversations', [ChatController::class, 'conversations'])->name('conversations');
         Route::post('/conversations/start', [ChatController::class, 'startConversation'])->name('conversations.start');

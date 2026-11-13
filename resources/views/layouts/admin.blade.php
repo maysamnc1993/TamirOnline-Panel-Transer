@@ -1947,9 +1947,9 @@
     })();
     </script>
 
-    @include('components.call-notification')
+    {{-- Calls and microphone capture are disabled: written communication only. --}}
     @if(!request()->routeIs('admin.messenger'))
-        @include('components.chat-widget')
+        <a href="{{ route('admin.messenger') }}" class="fixed bottom-5 left-5 z-40 flex items-center gap-2 rounded-full bg-blue-600 px-4 py-3 text-white shadow-lg hover:bg-blue-700" aria-label="بازکردن پیام‌رسان">✉ <span>پیام‌رسان</span></a>
     @endif
     @if(request()->routeIs('warehouse.*'))
         @include('components.order-search-widget')

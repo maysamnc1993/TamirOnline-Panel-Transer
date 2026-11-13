@@ -63,6 +63,11 @@ class Conversation extends Model
         return $this->hasMany(Call::class);
     }
 
+    public function savedSpace(): HasOne
+    {
+        return $this->hasOne(SavedSpace::class);
+    }
+
     // Helpers
     public function isPrivate(): bool
     {
@@ -189,7 +194,7 @@ class Conversation extends Model
         }
 
         // Check if only admins can send
-        if ($this->settings['only_admins_can_send'] ?? false) {
+        if ($this->isChannel() || ($this->settings['only_admins_can_send'] ?? false)) {
             return (bool) $participant->pivot->is_admin;
         }
 

@@ -83,6 +83,11 @@ class Message extends Model
             ->withPivot('read_at');
     }
 
+    public function edits(): HasMany
+    {
+        return $this->hasMany(MessageEdit::class);
+    }
+
     // Helpers
     public function isText(): bool
     {
