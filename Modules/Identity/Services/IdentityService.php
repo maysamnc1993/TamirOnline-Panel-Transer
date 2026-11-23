@@ -82,7 +82,7 @@ final class IdentityService
             ]);
         }
 
-        $result = $this->otp->send($normalized);
+        $result = $this->otp->send($normalized, customer: true);
 
         if (! ($result['success'] ?? false)) {
             // اگر throttle داخلی OTPService بود، wait_time را surface کن
@@ -97,8 +97,9 @@ final class IdentityService
 
         return [
             'ok' => true,
-            'expires_in' => (int) ($result['expires_in'] ?? config('sms.otp.expires_in', 120)),
-            'can_resend_in' => (int) config('sms.otp.resend_delay', 60),
+            'expires_in' => (int) $result['expires_in'],
+            'can_resend_in' => (int) $result['can_resend_in'],
+            'reused' => (bool) $result['reused'],
         ];
     }
 
@@ -133,7 +134,7 @@ final class IdentityService
                 'mobile' => $normalized,
             ]);
         } else {
-            $verification = $this->otp->verify($normalized, $trimmedCode);
+            $verification = $this->otp->verify($normalized, $trimmedCode, customer: true);
             if (! ($verification['success'] ?? false)) {
                 throw ValidationException::withMessages([
                     'code' => $verification['message'] ?? 'کد تأیید نامعتبر است.',
