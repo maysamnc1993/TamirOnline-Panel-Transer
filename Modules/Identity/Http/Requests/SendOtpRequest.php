@@ -15,6 +15,7 @@ class SendOtpRequest extends FormRequest
     {
         return [
             'mobile' => ['required', 'string', 'max:20'],
+            'channel' => ['sometimes', 'string', 'in:sms,voice'],
         ];
     }
 

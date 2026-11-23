@@ -31,14 +31,15 @@ class AuthController extends Controller
 
     public function sendOtp(SendOtpRequest $request): JsonResponse
     {
-        $result = $this->identity->sendOtp((string) $request->input('mobile'));
+        $result = $this->identity->sendOtp((string) $request->input('mobile'), (string) $request->input('channel', 'sms'));
 
         return response()->json([
             'ok' => true,
-            'message' => ! empty($result['reused']) ? 'همان کد دوباره ارسال شد.' : 'کد تأیید ارسال شد.',
+            'message' => $result['message'] ?? (! empty($result['reused']) ? 'همان کد دوباره ارسال شد.' : 'کد تأیید ارسال شد.'),
             'expires_in' => $result['expires_in'],
             'reused' => $result['reused'] ?? false,
             'can_resend_in' => $result['can_resend_in'],
+            'channels' => $result['channels'],
         ]);
     }
 

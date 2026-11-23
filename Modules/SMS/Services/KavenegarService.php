@@ -78,7 +78,15 @@ class KavenegarService
         }
     }
 
-    public function sendTemplate(string $receptor, string $template, array $tokens): array
+    public function otpVoiceTemplate(): string
+    {
+        if ($this->apiKey === '') {
+            return '';
+        }
+        return trim($this->crmSetting('kavenegar_otp_voice_template') ?: (string) config('customer_otp.voice_template'));
+    }
+
+    public function sendTemplate(string $receptor, string $template, array $tokens, string $type = 'sms'): array
     {
         if (empty($this->apiKey)) {
             return ['success' => false, 'message' => 'API Key تنظیم نشده است'];
@@ -88,6 +96,10 @@ class KavenegarService
             'receptor' => $receptor,
             'template' => $template,
         ];
+
+        if ($type === 'call') {
+            $data['type'] = 'call';
+        }
 
         $tokenKeys = ['token', 'token2', 'token3', 'token10', 'token20'];
         foreach ($tokenKeys as $key) {
@@ -107,7 +119,7 @@ class KavenegarService
             $response = Http::timeout(30)->asForm()->post($url, $data);
             return $this->parseKavenegarResponse($response->json(), $receptor, 'template:' . $template);
         } catch (\Exception $e) {
-            Log::error('Template SMS Exception', ['error' => $e->getMessage()]);
+            Log::error('OTP template request failed', ['type' => $type, 'exception' => get_class($e)]);
             return ['success' => false, 'message' => $e->getMessage()];
         }
     }
