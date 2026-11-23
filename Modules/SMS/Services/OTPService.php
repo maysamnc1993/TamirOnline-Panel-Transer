@@ -85,7 +85,12 @@ class OTPService
                 'customer' => $customer,
             ], $remaining);
         }
-        Cache::put($lastSentKey, ['available_at' => time() + $cooldown], $cooldown);
+        if ($customer) {
+            $cooldown = min($cooldown, $remaining);
+        }
+        if ($cooldown > 0) {
+            Cache::put($lastSentKey, ['available_at' => time() + $cooldown], $cooldown);
+        }
 
         return [
             'success' => true,
