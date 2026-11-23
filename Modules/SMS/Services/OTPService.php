@@ -33,14 +33,14 @@ class OTPService
         return str_pad(random_int(0, pow(10, $this->length) - 1), $this->length, '0', STR_PAD_LEFT);
     }
 
-    public function send(string $mobile, bool $customer = false): array
+    public function send(string $mobile, bool $customer = false, ?string $voiceTemplate = null): array
     {
         $mobile = $this->normalizeMobile($mobile);
 
-        return $this->withOtpLock($mobile, fn () => $this->sendLocked($mobile, $customer));
+        return $this->withOtpLock($mobile, fn () => $this->sendLocked($mobile, $customer, $voiceTemplate));
     }
 
-    private function sendLocked(string $mobile, bool $customer): array
+    private function sendLocked(string $mobile, bool $customer, ?string $voiceTemplate): array
     {
         $lastSentKey = "otp_last_sent_{$mobile}";
         $waitTime = $this->resendWait($lastSentKey);
@@ -59,6 +59,9 @@ class OTPService
         $existing = $customer ? Cache::get($cacheKey) : null;
         $now = time();
         $reused = is_array($existing) && $this->expiresAt($existing) > $now;
+        if ($voiceTemplate !== null && (! $reused || ! ($existing['customer'] ?? false))) {
+            return ['success' => false, 'message' => 'ابتدا کد جدید را با پیامک دریافت کنید.'];
+        }
         if ($reused && $existing['attempts'] >= $this->maxAttempts) {
             return ['success' => false, 'message' => 'تعداد تلاش‌های مجاز تمام شد. بعد از انقضای کد دوباره درخواست دهید.'];
         }
@@ -69,10 +72,24 @@ class OTPService
             ? ($reused ? self::CUSTOMER_REPEAT_RESEND_SECONDS : self::CUSTOMER_FIRST_RESEND_SECONDS)
             : $this->resendDelay;
 
-        $template = config('sms.templates.otp', 'verify');
-        $result = $this->sms->sendTemplate($mobile, $template, ['token' => $code]);
-        if (! ($result['success'] ?? false)) {
-            return ['success' => false, 'message' => $result['message'] ?? 'خطا در ارسال کد تایید'];
+        if ($voiceTemplate !== null) {
+            // Reserve the shared retry window before calling the provider.
+            $voiceCooldown = min($cooldown, $deadline - $now);
+            Cache::put($lastSentKey, ['available_at' => $now + $voiceCooldown], $voiceCooldown);
+            $result = $this->sms->sendTemplate($mobile, $voiceTemplate, ['token' => $code], 'call');
+            if (! ($result['success'] ?? false)) {
+                return [
+                    'success' => false,
+                    'message' => 'برقراری تماس صوتی ممکن نشد. کمی بعد دوباره تلاش کنید.',
+                    'wait_time' => $this->resendWait($lastSentKey),
+                ];
+            }
+        } else {
+            $template = config('sms.templates.otp', 'verify');
+            $result = $this->sms->sendTemplate($mobile, $template, ['token' => $code]);
+            if (! ($result['success'] ?? false)) {
+                return ['success' => false, 'message' => $result['message'] ?? 'خطا در ارسال کد تایید'];
+            }
         }
 
         $remaining = max(0, $deadline - time());
@@ -94,7 +111,7 @@ class OTPService
 
         return [
             'success' => true,
-            'message' => $reused ? 'همان کد دوباره ارسال شد.' : 'کد تأیید ارسال شد.',
+            'message' => $voiceTemplate !== null ? 'درخواست تماس صوتی ثبت شد.' : ($reused ? 'همان کد دوباره ارسال شد.' : 'کد تأیید ارسال شد.'),
             'expires_in' => $remaining,
             'can_resend_in' => $cooldown,
             'reused' => $reused,

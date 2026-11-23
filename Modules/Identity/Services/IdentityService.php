@@ -46,15 +46,21 @@ final class IdentityService
      * هر کد را با Log::info می‌نویسد). این جلوگیری از حادثه‌ی APP_ENV اشتباه
      * در deploy تولید است.
      *
-     * @return array{ok: bool, expires_in: int, can_resend_in: int}
+     * @return array{ok: bool, expires_in: int, can_resend_in: int, channels: list<string>, reused?: bool, message?: string, test_mode?: bool}
      *
      * @throws ValidationException
      */
-    public function sendOtp(string $mobile): array
+    public function sendOtp(string $mobile, string $channel = 'sms'): array
     {
         $normalized = PhoneNormalizer::normalize($mobile);
         if ($normalized === null) {
             throw ValidationException::withMessages(['mobile' => 'شماره موبایل نامعتبر است.']);
+        }
+
+        $voice = $channel === 'voice';
+        $voiceTemplate = $this->sms->otpVoiceTemplate();
+        if ($voice && ($voiceTemplate === '' || $this->isTestModeFor($normalized))) {
+            throw ValidationException::withMessages(['channel' => 'تماس صوتی برای این شماره در دسترس نیست.']);
         }
 
         // ─── حالت تست — Kavenegar صدا نمی‌خورد، فقط success برمی‌گردد ──
@@ -71,6 +77,7 @@ final class IdentityService
                 'expires_in' => (int) config('sms.otp.expires_in', 120),
                 'can_resend_in' => (int) config('sms.otp.resend_delay', 60),
                 'test_mode' => true,
+                'channels' => ['sms'],
             ];
         }
 
@@ -82,7 +89,7 @@ final class IdentityService
             ]);
         }
 
-        $result = $this->otp->send($normalized, customer: true);
+        $result = $this->otp->send($normalized, customer: true, voiceTemplate: $voice ? $voiceTemplate : null);
 
         if (! ($result['success'] ?? false)) {
             // اگر throttle داخلی OTPService بود، wait_time را surface کن
@@ -100,6 +107,8 @@ final class IdentityService
             'expires_in' => (int) $result['expires_in'],
             'can_resend_in' => (int) $result['can_resend_in'],
             'reused' => (bool) $result['reused'],
+            'channels' => $voiceTemplate === '' ? ['sms'] : ['sms', 'voice'],
+            'message' => $result['message'],
         ];
     }
 
