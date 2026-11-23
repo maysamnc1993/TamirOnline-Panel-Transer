@@ -8,8 +8,7 @@ use Illuminate\Support\Facades\Cache;
 class OTPService
 {
     private const CUSTOMER_VALIDITY_SECONDS = 300;
-    private const CUSTOMER_FIRST_RESEND_SECONDS = 30;
-    private const CUSTOMER_REPEAT_RESEND_SECONDS = 60;
+    public const CUSTOMER_RESEND_SECONDS = 30;
     private const CUSTOMER_FAILURE_WINDOW_SECONDS = 900;
     private const CUSTOMER_FAILURE_LIMIT = 15;
 
@@ -68,15 +67,13 @@ class OTPService
 
         $code = $reused ? $existing['code'] : $this->generate();
         $deadline = $reused ? $this->expiresAt($existing) : $now + ($customer ? self::CUSTOMER_VALIDITY_SECONDS : $this->expiresIn);
-        $cooldown = $customer
-            ? ($reused ? self::CUSTOMER_REPEAT_RESEND_SECONDS : self::CUSTOMER_FIRST_RESEND_SECONDS)
-            : $this->resendDelay;
+        $cooldown = $customer ? self::CUSTOMER_RESEND_SECONDS : $this->resendDelay;
 
         if ($voiceTemplate !== null) {
             // Reserve the shared retry window before calling the provider.
             $voiceCooldown = min($cooldown, $deadline - $now);
             Cache::put($lastSentKey, ['available_at' => $now + $voiceCooldown], $voiceCooldown);
-            $result = $this->sms->sendTemplate($mobile, $voiceTemplate, ['token' => $code], 'call');
+            $result = $this->sms->sendVoiceOtp($mobile, $code, $voiceTemplate);
             if (! ($result['success'] ?? false)) {
                 return [
                     'success' => false,
