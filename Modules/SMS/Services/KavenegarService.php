@@ -78,6 +78,42 @@ class KavenegarService
         }
     }
 
+    public function canSendVoiceOtp(): bool
+    {
+        return $this->apiKey !== '';
+    }
+
+    public function sendVoiceOtp(string $receptor, string $code, string $template): array
+    {
+        if (! $this->canSendVoiceOtp()) {
+            return ['success' => false];
+        }
+        if ($template !== '') {
+            return $this->sendTemplate($receptor, $template, ['token' => $code], 'call');
+        }
+
+        $digits = ['صفر', 'یک', 'دو', 'سه', 'چهار', 'پنج', 'شش', 'هفت', 'هشت', 'نه'];
+        $spokenCode = implode('، ', array_map(fn ($digit) => $digits[(int) $digit], str_split($code)));
+        try {
+            $response = Http::timeout(15)->asForm()->post(
+                "{$this->baseUrl}/{$this->apiKey}/call/maketts.json",
+                [
+                    'receptor' => $receptor,
+                    'message' => "تعمیرآنلاین. کد ورود شما: {$spokenCode}. تکرار کد: {$spokenCode}.",
+                ],
+            );
+            $status = (int) $response->json('return.status');
+            if ($response->successful() && $status === 200) {
+                return ['success' => true];
+            }
+            Log::warning('Customer OTP voice request rejected', ['status' => $status]);
+        } catch (\Exception $e) {
+            Log::warning('Customer OTP voice request failed', ['exception' => get_class($e)]);
+        }
+
+        return ['success' => false];
+    }
+
     public function otpVoiceTemplate(): string
     {
         if ($this->apiKey === '') {
