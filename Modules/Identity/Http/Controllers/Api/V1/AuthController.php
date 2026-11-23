@@ -35,8 +35,9 @@ class AuthController extends Controller
 
         return response()->json([
             'ok' => true,
-            'message' => 'کد تأیید ارسال شد.',
+            'message' => ! empty($result['reused']) ? 'همان کد دوباره ارسال شد.' : 'کد تأیید ارسال شد.',
             'expires_in' => $result['expires_in'],
+            'reused' => $result['reused'] ?? false,
             'can_resend_in' => $result['can_resend_in'],
         ]);
     }
