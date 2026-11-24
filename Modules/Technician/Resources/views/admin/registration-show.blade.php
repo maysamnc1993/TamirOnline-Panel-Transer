@@ -584,6 +584,32 @@
     </div>
     @endif
 
+    <section class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-5" aria-labelledby="registration-profile-photo">
+        <h2 id="registration-profile-photo" class="text-base font-bold text-gray-900 mb-2">عکس پروفایل</h2>
+        <p class="text-sm text-gray-600 mb-4">عکس پروفایل جدا از عکس ۳×۴ پرونده نگهداری می‌شود.</p>
+        @if ($hasProfilePhoto)
+            <img src="{{ route('technician.admin.registrations.profile-photo', $registration->id) }}"
+                 alt="عکس پروفایل تعمیرکار" width="112" height="112"
+                 class="object-contain rounded-xl bg-gray-100 border border-gray-200 mb-4">
+        @endif
+        @if ($canSetProfilePhoto)
+            <form method="POST" action="{{ route('technician.admin.registrations.profile-photo.save', $registration->id) }}" enctype="multipart/form-data" class="space-y-2">
+                @csrf
+                @method('PUT')
+                <label for="profile-photo" class="block text-sm font-semibold text-gray-800">انتخاب عکس PNG</label>
+                <input id="profile-photo" name="profile_photo" type="file" accept="image/png" required class="block w-full text-sm text-gray-700">
+                @error('profile_photo', 'profilePhoto')
+                    <p class="text-sm text-red-700" role="alert">{{ $message }}</p>
+                @enderror
+                <button type="submit" class="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white">
+                    {{ $hasProfilePhoto ? 'به‌روزرسانی عکس پروفایل' : 'ذخیرهٔ عکس پروفایل' }}
+                </button>
+            </form>
+        @else
+            <p class="text-sm text-gray-600">ثبت عکس برای پروندهٔ تأییدشده با مدارک کامل، عکس ۳×۴ و تکنسین فعال در مدیریت خدمات امکان‌پذیر است.</p>
+        @endif
+    </section>
+
     {{-- مدارک آپلود شده --}}
     @if($registration->documents_uploaded)
     <div class="bg-white rounded-xl border border-gray-200 p-5">

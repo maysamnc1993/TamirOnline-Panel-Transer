@@ -41,6 +41,8 @@ Route::middleware(['auth'])->prefix('admin/technician')->name('technician.admin.
     Route::get('/registrations/{id}/document/{field}', [TechnicianAdminController::class, 'registrationDocument'])
         ->where('field', '[a-z0-9_]+')
         ->name('registrations.document');
+    Route::get('/registrations/{id}/profile-photo', [TechnicianAdminController::class, 'registrationProfilePhoto'])->name('registrations.profile-photo');
+    Route::put('/registrations/{id}/profile-photo', [TechnicianAdminController::class, 'registrationSaveProfilePhoto'])->name('registrations.profile-photo.save');
     Route::put('/registrations/{id}/status', [TechnicianAdminController::class, 'registrationUpdateStatus'])->name('registrations.update-status');
     Route::put('/registrations/{id}/step', [TechnicianAdminController::class, 'registrationUpdateStep'])->name('registrations.update-step');
     Route::put('/registrations/{id}/note', [TechnicianAdminController::class, 'registrationUpdateNote'])->name('registrations.update-note');
