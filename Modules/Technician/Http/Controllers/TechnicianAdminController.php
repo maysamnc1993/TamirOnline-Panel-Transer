@@ -418,6 +418,7 @@ class TechnicianAdminController extends Controller
     private function canSetProfilePhoto(TechnicianRegistration $registration): bool
     {
         return $registration->status === 'approved'
+            && $registration->promissory_note_status === 'approved'
             && $registration->documents_uploaded
             && blank($registration->documents_reject_reason)
             && filled($registration->doc_photo_3x4)
