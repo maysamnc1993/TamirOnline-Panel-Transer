@@ -311,7 +311,12 @@ class TechnicianAdminController extends Controller
                 ->toArray();
         }
 
-        return view('technician::admin.registration-show', compact('registration', 'applianceNames'));
+        $canSetProfilePhoto = $this->canSetProfilePhoto($registration);
+        $hasProfilePhoto = Storage::disk('local')->exists($this->profilePhotoPath($registration));
+
+        return view('technician::admin.registration-show', compact(
+            'registration', 'applianceNames', 'canSetProfilePhoto', 'hasProfilePhoto'
+        ));
     }
 
     /**
@@ -358,6 +363,72 @@ class TechnicianAdminController extends Controller
             basename($relativePath),
             ['Content-Disposition' => 'inline; filename="' . basename($relativePath) . '"']
         );
+    }
+
+    public function registrationProfilePhoto($id)
+    {
+        $this->checkAccess();
+        $registration = TechnicianRegistration::findOrFail($id);
+        $path = $this->profilePhotoPath($registration);
+        $disk = Storage::disk('local');
+        abort_unless($disk->exists($path), 404);
+
+        return $disk->response($path, 'profile-photo.png', [
+            'Content-Type' => 'image/png',
+            'Cache-Control' => 'private, no-store',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    }
+
+    public function registrationSaveProfilePhoto(Request $request, $id)
+    {
+        $this->checkAccess();
+        $registration = TechnicianRegistration::findOrFail($id);
+        abort_unless($this->canSetProfilePhoto($registration), 403);
+
+        $request->validateWithBag('profilePhoto', [
+            'profile_photo' => ['bail', 'required', 'file', 'mimes:png', 'max:4096', 'dimensions:min_width=128,min_height=128,max_width=2048,max_height=2048,ratio=1/1'],
+        ], [
+            'profile_photo.required' => 'عکس پروفایل را انتخاب کنید.',
+            'profile_photo.mimes' => 'فرمت عکس پروفایل باید PNG باشد.',
+            'profile_photo.max' => 'حجم عکس پروفایل نباید بیشتر از ۴ مگابایت باشد.',
+            'profile_photo.dimensions' => 'عکس باید مربع و بین ۱۲۸ تا ۲۰۴۸ پیکسل باشد.',
+        ]);
+
+        $disk = Storage::disk('local');
+        $path = $this->profilePhotoPath($registration);
+        $temporaryPath = dirname($path).'/'.Str::uuid().'.tmp';
+        try {
+            if (! $disk->put($temporaryPath, $request->file('profile_photo')->getContent())
+                || ! $disk->move($temporaryPath, $path)) {
+                return back()->withErrors(['profile_photo' => 'ذخیرهٔ عکس انجام نشد. دوباره تلاش کنید.'], 'profilePhoto');
+            }
+        } finally {
+            if ($disk->exists($temporaryPath)) {
+                $disk->delete($temporaryPath);
+            }
+        }
+
+        $this->logActivity($registration, 'profile_photo_updated', null, null, 'عکس پروفایل ثبت شد.');
+
+        return redirect()->route('technician.admin.registrations.show', $registration->id)
+            ->with('success', 'عکس پروفایل ذخیره شد.');
+    }
+
+    private function canSetProfilePhoto(TechnicianRegistration $registration): bool
+    {
+        return $registration->status === 'approved'
+            && $registration->documents_uploaded
+            && blank($registration->documents_reject_reason)
+            && filled($registration->doc_photo_3x4)
+            && filled($registration->mobile)
+            && CrmTechnician::where('mobile', $registration->mobile)->where('status', 'active')->exists()
+            && Storage::disk('public')->exists($registration->doc_photo_3x4);
+    }
+
+    private function profilePhotoPath(TechnicianRegistration $registration): string
+    {
+        return "technician-profile-photos/{$registration->id}/profile.png";
     }
 
     /**
