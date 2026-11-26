@@ -8,6 +8,7 @@ use Modules\Site\Http\Controllers\Api\V1\BlogController;
 use Modules\Site\Http\Controllers\Api\V1\CatalogBrandController;
 use Modules\Site\Http\Controllers\Api\V1\CatalogDeviceBrandController;
 use Modules\Site\Http\Controllers\Api\V1\CatalogDeviceController;
+use Modules\Site\Http\Controllers\Api\V1\CatalogOrderRatingController;
 use Modules\Site\Http\Controllers\Api\V1\CommentController;
 use Modules\Site\Http\Controllers\Api\V1\ContactMessageController;
 use Modules\Site\Http\Controllers\Api\V1\DevicePageController;
@@ -126,6 +127,9 @@ Route::prefix('v1')->group(function () {
     // ── Internal-only detail endpoints (BFF → API) ────────────────
     // catalog brand/device detail با تمام فیلدهای CMS — فقط برای فرانت Next.js
     Route::middleware(['internal.token', 'throttle:60,1'])->group(function () {
+        Route::get('/catalog/order-ratings', [CatalogOrderRatingController::class, 'show'])
+            ->name('api.v1.catalog.order-ratings.show');
+
         Route::get('/catalog/brands/{slug}', [CatalogBrandController::class, 'show'])
             ->where('slug', '[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?')
             ->name('api.v1.catalog.brands.show');
